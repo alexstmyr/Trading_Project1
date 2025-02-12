@@ -17,22 +17,20 @@ class MarketMaker:
     def compute_expected_revenue(self):
         Pi_LB_S = np.clip(0.5 - 0.08 * self.S_values, 0, 0.5)
         Pi_LS_S = np.clip(0.5 - 0.08 * self.S_values, 0, 0.5)
-        expected_revenue_liq = (Pi_LB_S + Pi_LS_S) * self.S_values
-        expected_revenue_informed = (1 - self.Pi_I) * (Pi_LB_S + Pi_LS_S) * self.S_values
-        expected_revenue_considering = (1 - self.Pi_I) * (Pi_LB_S + Pi_LS_S) * self.S_values
+        expected_revenue = (1 - self.Pi_I) * ((Pi_LB_S * self.S_values) + (Pi_LS_S * self.S_values))
         
         # Additional expected revenue conditions
         Pi_LB_S_fixed = np.full_like(self.S_values, 0.5)
         Pi_LS_S_fixed = np.full_like(self.S_values, 0.5)
-        expected_revenue_fixed = (Pi_LB_S_fixed + Pi_LS_S_fixed) * self.S_values
-        expected_revenue_informed_fixed = (1 - self.Pi_I) * (Pi_LB_S_fixed + Pi_LS_S_fixed) * self.S_values
+        expected_revenue_liquidity = (Pi_LB_S_fixed * self.S_values) + (Pi_LS_S_fixed * self.S_values)
+        expected_revenue_informed = (1 - self.Pi_I) * ((Pi_LB_S_fixed * self.S_values) + (Pi_LS_S_fixed * self.S_values))
         
-        return expected_revenue_liq, expected_revenue_informed, expected_revenue_considering, expected_revenue_fixed, expected_revenue_informed_fixed
+        return expected_revenue, expected_revenue_liquidity, expected_revenue_informed
 
     def compute_optimal_bid_ask(self):
-        _, _, expected_revenue_considering, _, _ = self.compute_expected_revenue()
-        optimal_bid = self.P_0 - (expected_revenue_considering.max() / 2)
-        optimal_ask = self.P_0 + (expected_revenue_considering.max() / 2)
+        _, _, expected_revenue, _, _ = self.compute_expected()
+        optimal_bid = self.P_0 - (expected_revenue.max() / 2)
+        optimal_ask = self.P_0 + (expected_revenue.max() / 2)
         return optimal_bid, optimal_ask
 
 def plot_price_distribution(market_maker):
@@ -46,14 +44,12 @@ def plot_price_distribution(market_maker):
     plt.show()
 
 def plot_expected_revenue(market_maker):
-    expected_revenue_liq, expected_revenue_informed, expected_revenue_considering, expected_revenue_fixed, expected_revenue_informed_fixed = market_maker.compute_expected_revenue()
+    expected_revenue, expected_revenue_liquidity, expected_revenue_informed = market_maker.compute_expected_revenue()
     
     plt.figure(figsize=(8, 5))
-    plt.plot(market_maker.S_values, expected_revenue_liq, label="Liquidity Motivated Trades", linestyle="dashed")
-    plt.plot(market_maker.S_values, expected_revenue_informed, label="40% Informed Trades")
-    plt.plot(market_maker.S_values, expected_revenue_considering, label="Considering Given Probabilities", linestyle="dotted")
-    plt.plot(market_maker.S_values, expected_revenue_fixed, label="Liquidity Motivated Trades (Fixed Probabilities)", linestyle="dashdot")
-    plt.plot(market_maker.S_values, expected_revenue_informed_fixed, label="40% Informed Trades (Fixed Probabilities)", linestyle="dashed")
+    plt.plot(market_maker.S_values, expected_revenue, label="Expected Revenue")#
+    plt.plot(market_maker.S_values, expected_revenue_liquidity, label="Only Liquidity Motivated Trades", linestyle="dashdot")#
+    plt.plot(market_maker.S_values, expected_revenue_informed, label="40% Informed Trades", linestyle="dashed")#
     
     plt.xlabel("Spread (S)")
     plt.ylabel("Expected Revenue")
